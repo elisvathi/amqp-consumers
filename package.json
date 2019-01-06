@@ -15,9 +15,8 @@
   "keywords": [],
   "author": "Elis Vathi",
   "license": "MIT",
+  
   "dependencies": {
-    "@types/amqplib": "^0.5.9",
-    "@types/uuid": "^3.4.4",
     "amqplib": "^0.5.3",
     "reflect-metadata": "^0.1.12",
     "tslib": "^1.9.3",
@@ -27,7 +26,10 @@
   "bin": {
     "amqp-consumers": "main.js"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/amqplib": "^0.5.9",
+    "@types/uuid": "^3.4.4"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/elisvathi/amqp-consumers.git"
