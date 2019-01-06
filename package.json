@@ -1,7 +1,7 @@
 {
   "name": "amqp-consumers",
   "version": "1.0.0",
-  "description": "",
+  "description": "\"Amqp server with typescript decorators\"",
   "main": "index.js",
   "scripts": {
     "start": "npm run build && node --inspect=0.0.0.0:5858 ./bin/main.js",
@@ -9,12 +9,12 @@
     "build": "./node_modules/typescript/bin/tsc -p tsconfig.json",
     "build:watch": "./node_modules/typescript/bin/tsc -w -p tsconfig.json",
     "lint": "./node_modules/tslint/bin/tslint -t stylish --project \"tsconfig.json\"",
-    "test": "./node_modules/.bin/mocha -r ts-node/register tests/**/*.spec.ts",
+    "test": "mocha -r ts-node/register tests/**/*.spec.ts",
     "clean": "./node_modules/rimraf/bin.js bin"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Elis Vathi",
+  "license": "MIT",
   "dependencies": {
     "@types/amqplib": "^0.5.9",
     "@types/uuid": "^3.4.4",
@@ -23,5 +23,17 @@
     "tslib": "^1.9.3",
     "typescript": "^3.2.2",
     "uuid": "^3.3.2"
-  }
+  },
+  "bin": {
+    "amqp-consumers": "main.js"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elisvathi/amqp-consumers.git"
+  },
+  "bugs": {
+    "url": "https://github.com/elisvathi/amqp-consumers/issues"
+  },
+  "homepage": "https://github.com/elisvathi/amqp-consumers#readme"
 }
