@@ -2,7 +2,7 @@ import { AmqpServer } from './core/AmqpServer';
 import { Consumer, Consumes, InjectData, InjectChannel } from './decorators/consumer';
 import { Channel } from 'amqplib';
 
-@Consumer({queue: "abcdef"})
+@Consumer()
 export class TestConsumer {
   constructor() {
 

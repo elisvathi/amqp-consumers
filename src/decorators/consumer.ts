@@ -8,10 +8,8 @@ export const AmqpMetadataKeys = {
   AMQP_CONSUMES: 'amqpConsumes'
 }
 
-export interface IConsumerConfig {
-  queue?: string;
-  consumers?: number;
-  autoAck?: boolean;
+export class IConsumerConfig {
+  json: boolean = true;
 }
 
 export interface IConsumesConfig {
