@@ -6,15 +6,15 @@ import { AmqpController, Consumer, InjectChannel, InjectConnection, InjectData, 
 
 @AmqpController()
 export class TestConsumer {
-  constructor(@InjectData() private data: any,
+  constructor(
               @InjectChannel() private channel: Channel, @InjectConnection() con: Connection) {
 
   }
 
   @Consumer({ queue: "ELIS_VATHI", consumers: 1 })
-  public testMethod() {
-    console.log("DATA ", this.data.content.toString());
-    this.channel.ack(this.data);
+  public testMethod(@InjectData() data: any) {
+    console.log("DATA ", data.content.toString());
+    this.channel.ack(data);
   }
 }
 

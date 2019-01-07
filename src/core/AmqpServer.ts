@@ -48,7 +48,7 @@ export class AmqpServer {
                   } else {
                     instance = new consumer();
                   }
-                  const finalArgs = this.buildArgs(instance, prop);
+                  const finalArgs = this.buildArgs(instance, prop, args);
                   return instance[prop](...finalArgs);
                 },
               };
@@ -92,7 +92,7 @@ export class AmqpServer {
     const connectionIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_CONNECTION, target, prop) || [];
     const serverIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_SERVER, target, prop) || [];
     const arg: any = {};
-    let max = 0;
+    let max = -1;
     dataIndexes.forEach((index: number) => {
       arg[index] = args;
       if (index > max) { max = index; }
@@ -110,7 +110,7 @@ export class AmqpServer {
       if (index > max) { max = index; }
     });
     const finalArgs: any[] = [];
-    if (max === 0) { return finalArgs; }
+    if (max === -1) { return finalArgs; }
     for (let i = 0; i <= max; i++) {
       if (arg[i]) {
         finalArgs[i] = arg[i];
