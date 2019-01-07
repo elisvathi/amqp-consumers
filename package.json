@@ -2,7 +2,7 @@
   "name": "amqp-consumers",
   "version": "1.0.2",
   "description": "\"Amqp server with typescript decorators\"",
-  "main": "index.js",
+  "main": "bin/main.js",
   "scripts": {
     "start": "npm run build && node --inspect=0.0.0.0:5858 ./bin/main.js",
     "dev": "nodemon",
@@ -12,7 +12,7 @@
     "test": "mocha -r ts-node/register tests/**/*.spec.ts",
     "clean": "./node_modules/rimraf/bin.js bin"
   },
-  "keywords": [],
+  "keywords": ["amqp", "typescript", "rabbitmq", "decorators"],
   "author": "Elis Vathi",
   "license": "MIT",
   

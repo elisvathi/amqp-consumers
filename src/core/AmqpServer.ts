@@ -1,14 +1,10 @@
-import * as uuid from 'uuid'
-import { connect, Connection, Options, Channel, ConsumeMessage } from 'amqplib';
-import { AmqpMetadataKeys, IConsumerConfig, Consumer, IConsumesConfig } from '../decorators/consumer';
+import { Channel, connect, Connection, ConsumeMessage } from "amqplib";
+import { any } from "bluebird";
+import * as uuid from "uuid";
+import { AmqpController, AmqpMetadataKeys, IConsumerConfig, IControllerConfig } from "../decorators/consumer";
+import { AmqpServerConfig } from "./AmqpServerConfig";
 
-export class IAmqpServerConfig {
-  url: string | Options.Connect;
-  consumers: any[] = [];
-  exchanges: ExchangeConfig[] = [];
-}
-
-export interface ExchangeConfig {
+export interface IExchangeConfig {
   name: string;
   durable?: boolean;
   internal?: boolean;
@@ -17,108 +13,128 @@ export interface ExchangeConfig {
   arguments?: any;
   type: string;
 }
-export interface BindingConfig{
-  
+export interface IBindingConfig {
+  data?: any;
 }
 
 export interface IContainer {
   get<T>(arg: any): T;
 }
 
-const defaultContainer: { get<T>(someClass: { new(...args: any[]): T } | Function): T } = new (class {
-  private instances: { type: Function, object: any }[] = [];
-  get<T>(someClass: { new(...args: any[]): T }): T {
-    let instance = this.instances.find(instance => instance.type === someClass);
-    if (!instance) {
-      instance = { type: someClass, object: new someClass() };
-      this.instances.push(instance);
-    }
-
-    return instance.object;
-  }
-})();
-
 declare type ConsumerHandler = (msg: ConsumeMessage | null) => any;
 export class AmqpServer {
-  constructor(private config: IAmqpServerConfig) { }
-  connection: Connection
-  channel: Channel;
-  handlersBucket: { [queue: string]: ConsumerHandler } = {};
+  public connection: Connection;
+  public channel: Channel;
+  public handlersBucket: { [queue: string]: { handler: ConsumerHandler, config: IConsumerConfig } } = {};
+  constructor(private config: AmqpServerConfig) { }
 
-  async initServer() {
+  public async initServer() {
     if (this.config.consumers) {
       this.config.consumers.forEach((consumer) => {
-        const consumerMetadata = Reflect.getMetadata(AmqpMetadataKeys.AMQP_CONSUMER, consumer);
+        const consumerMetadata = Reflect.getMetadata(AmqpMetadataKeys.AMQP_CONTROLLER, consumer);
         if (consumer) {
           const props = Object.getOwnPropertyNames(consumer.prototype);
-          props.forEach(prop => {
-            const metaData: IConsumesConfig = Reflect.getMetadata(AmqpMetadataKeys.AMQP_CONSUMES, consumer.prototype[prop]);
+          props.forEach((prop) => {
+            const metaData: IConsumerConfig =
+              Reflect.getMetadata(AmqpMetadataKeys.AMQP_CONSUMER, consumer.prototype[prop]);
+            const hasConstructor = !!consumer.prototype.constructor;
+
             if (metaData) {
-              const conos = new consumer();
-              Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_CHANNEL, conos, prop)
-              this.handlersBucket[metaData.queue] = (args: any) => {
-                const instance = new consumer();
-                const dataIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_DATA, instance, prop) || [];
-                const channelIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_CHANNEL, instance, prop) || [];
-                const connectionIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_CONNECTION, instance, prop) || [];
-                const arg: any = {}
-                let max = 0;
-                dataIndexes.forEach((index: number) => {
-                  arg[index] = args;
-                  if (index > max) { max = index }
-                })
-                channelIndexes.forEach((index: number) => {
-                  arg[index] = this.channel;
-                  if (index > max) { max = index }
-                });
-                connectionIndexes.forEach((index: number) => {
-                  arg[index] = this.connection;
-                  if (index > max) { max = index }
-                });
-                const finalArgs = [];
-                for (let i = 0; i <= max; i++) {
-                  if (arg[i]) {
-                    finalArgs[i] = arg[i];
+              this.handlersBucket[metaData.queue] = {
+                config: metaData, handler: (args: any) => {
+                  let instance;
+                  if (hasConstructor) {
+                    instance = this.buildController(consumer, args);
                   } else {
-                    finalArgs[i] = undefined;
+                    instance = new consumer();
                   }
-                }
-                return instance[prop](...finalArgs);
-              }
+                  const finalArgs = this.buildArgs(instance, prop);
+                  return instance[prop](...finalArgs);
+                },
+              };
             }
-          })
+          });
         }
-      })
+      });
     }
     this.connection = await connect(this.config.url);
     this.channel = await this.connection.createChannel();
     await this.assertQueues();
     await this.assertExchanges();
-    Object.keys(this.handlersBucket).forEach(key => {
-      this.channel.consume(key, this.handlersBucket[key])
-    })
-    console.log("AMQP Server initialized")
+    this.bindConsumers();
+    console.log("AMQP Server initialized");
   }
-  async assertQueues() {
+  public async assertQueues() {
     const queues = Object.keys(this.handlersBucket);
     queues.forEach(async (q) => {
       await this.channel.assertQueue(q);
     });
-  };
-  async assertExchanges() {
-    this.config.exchanges.forEach(async (exchange: ExchangeConfig) => {
+  }
+  public async assertExchanges() {
+    this.config.exchanges.forEach(async (exchange: IExchangeConfig) => {
       this.channel.assertExchange(exchange.name, exchange.type, {
-        durable: exchange.durable,
-        internal: exchange.internal,
-        autoDelete: exchange.autoDelete,
         alternateExchange: exchange.alternateExchange,
         arguments: exchange.arguments,
-      })
-    })
+        autoDelete: exchange.autoDelete,
+        durable: exchange.durable,
+        internal: exchange.internal,
+      });
+    });
   }
 
-  publishMessage(queue: string, message: any) {
+  public publishMessage(queue: string, message: any) {
     this.channel.sendToQueue(queue, new Buffer(JSON.stringify(message)));
+  }
+
+  private buildArgs(target: any, prop?: any, args?: any) {
+    const dataIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_DATA, target, prop) || [];
+    const channelIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_CHANNEL, target, prop) || [];
+    const connectionIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_CONNECTION, target, prop) || [];
+    const serverIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_SERVER, target, prop) || [];
+    const arg: any = {};
+    let max = 0;
+    dataIndexes.forEach((index: number) => {
+      arg[index] = args;
+      if (index > max) { max = index; }
+    });
+    channelIndexes.forEach((index: number) => {
+      arg[index] = this.channel;
+      if (index > max) { max = index; }
+    });
+    connectionIndexes.forEach((index: number) => {
+      arg[index] = this.connection;
+      if (index > max) { max = index; }
+    });
+    serverIndexes.forEach((index: number) => {
+      arg[index] = this;
+      if (index > max) { max = index; }
+    });
+    const finalArgs: any[] = [];
+    if (max === 0) { return finalArgs; }
+    for (let i = 0; i <= max; i++) {
+      if (arg[i]) {
+        finalArgs[i] = arg[i];
+      } else {
+        finalArgs[i] = undefined;
+      }
+    }
+    return finalArgs;
+  }
+
+  private buildController(clazz: any, args?: any) {
+    const finalArgs = this.buildArgs(clazz, undefined, args);
+    return new clazz(...finalArgs);
+  }
+  private bindConsumers() {
+    Object.keys(this.handlersBucket).forEach((key) => {
+      const item = this.handlersBucket[key];
+      this.channel.consume(key, item.handler, {
+        arguments: item.config.arguments,
+        consumerTag: item.config.consumerTag,
+        noAck: item.config.noAck,
+        noLocal: item.config.noAck, priority: item.config.priority,
+      });
+    });
   }
 
 }
