@@ -1,0 +1,1 @@
+{"version":3,"file":"Consumer.js","sourceRoot":"","sources":["../../src/decorators/Consumer.ts"],"names":[],"mappings":";;AAAA,6CAAiE;AACjE,SAAgB,QAAQ,CAAC,MAAwB;IAC/C,OAAO,CAAC,MAAW,EAAE,WAA4B,EAAE,UAA8B,EAAE,EAAE;QACnF,OAAO,CAAC,cAAc,CAAC,6BAAgB,CAAC,aAAa,EAAE,MAAM,EAAE,MAAM,CAAC,WAAW,CAAC,CAAC,CAAC;IACtF,CAAC,CAAC;AACJ,CAAC;AAJD,4BAIC"}

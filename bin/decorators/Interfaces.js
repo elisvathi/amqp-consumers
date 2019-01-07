@@ -15,4 +15,4 @@ class IControllerConfig {
     }
 }
 exports.IControllerConfig = IControllerConfig;
-//# sourceMappingURL=consumer.js.map
+//# sourceMappingURL=Interfaces.js.map

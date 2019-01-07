@@ -1,8 +1,7 @@
+
 import { Channel, connect, Connection, ConsumeMessage } from "amqplib";
-import { any } from "bluebird";
-import * as uuid from "uuid";
-import { AmqpController, AmqpMetadataKeys, IConsumerConfig, IControllerConfig } from "../decorators/consumer";
-import { AmqpServerConfig } from "./AmqpServerConfig";
+import { AmqpMetadataKeys, IConsumerConfig } from "../decorators/Interfaces";
+import { IAmqpServerConfig } from "./Interfaces";
 
 export interface IExchangeConfig {
   name: string;
@@ -16,17 +15,29 @@ export interface IExchangeConfig {
 export interface IBindingConfig {
   data?: any;
 }
-
+export interface IContainerClass<T> {
+  new(...args: any[]): T;
+}
 export interface IContainer {
-  get<T>(arg: any): T;
+  // tslint:disable-next-line:ban-types
+  get<T>(someClass: IContainerClass<T> | Function): T;
+}
+
+export interface IContainerOptions {
+  fallback?: boolean;
+  fallbackOnErrors?: boolean;
 }
 
 declare type ConsumerHandler = (msg: ConsumeMessage | null) => any;
+
 export class AmqpServer {
   public connection: Connection;
   public channel: Channel;
   public handlersBucket: { [queue: string]: { handler: ConsumerHandler, config: IConsumerConfig } } = {};
-  constructor(private config: AmqpServerConfig) { }
+  private container: IContainer;
+  private defaultContainer: IContainer;
+  private containerOptions: IContainerOptions;
+  constructor(private config: IAmqpServerConfig) { }
 
   public async initServer() {
     if (this.config.consumers) {
@@ -38,7 +49,6 @@ export class AmqpServer {
             const metaData: IConsumerConfig =
               Reflect.getMetadata(AmqpMetadataKeys.AMQP_CONSUMER, consumer.prototype[prop]);
             const hasConstructor = !!consumer.prototype.constructor;
-
             if (metaData) {
               this.handlersBucket[metaData.queue] = {
                 config: metaData, handler: (args: any) => {
@@ -85,6 +95,27 @@ export class AmqpServer {
   public publishMessage(queue: string, message: any) {
     this.channel.sendToQueue(queue, new Buffer(JSON.stringify(message)));
   }
+  public useContainer(container: IContainer, options?: IContainerOptions) {
+    this.container = container;
+  }
+
+  // tslint:disable-next-line:ban-types
+  private getFromContainer<T>(someClass: IContainerClass<T> | Function) {
+    if (this.container) {
+      try {
+        const instance = this.container.get(someClass);
+        if (instance) { return instance; }
+        if (!this.containerOptions || !this.containerOptions.fallback) {
+          return instance;
+        }
+      } catch (err) {
+        if (!this.containerOptions || !this.containerOptions.fallback) {
+          throw (err);
+        }
+      }
+    }
+    return this.defaultContainer.get<T>(someClass);
+  }
 
   private buildArgs(target: any, prop?: any, args?: any) {
     const dataIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_DATA, target, prop) || [];
@@ -120,7 +151,6 @@ export class AmqpServer {
     }
     return finalArgs;
   }
-
   private buildController(clazz: any, args?: any) {
     const finalArgs = this.buildArgs(clazz, undefined, args);
     return new clazz(...finalArgs);

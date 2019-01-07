@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const amqplib_1 = require("amqplib");
-const consumer_1 = require("../decorators/consumer");
+const Interfaces_1 = require("../decorators/Interfaces");
 class AmqpServer {
     constructor(config) {
         this.config = config;
@@ -10,11 +10,11 @@ class AmqpServer {
     async initServer() {
         if (this.config.consumers) {
             this.config.consumers.forEach((consumer) => {
-                const consumerMetadata = Reflect.getMetadata(consumer_1.AmqpMetadataKeys.AMQP_CONTROLLER, consumer);
+                const consumerMetadata = Reflect.getMetadata(Interfaces_1.AmqpMetadataKeys.AMQP_CONTROLLER, consumer);
                 if (consumer) {
                     const props = Object.getOwnPropertyNames(consumer.prototype);
                     props.forEach((prop) => {
-                        const metaData = Reflect.getMetadata(consumer_1.AmqpMetadataKeys.AMQP_CONSUMER, consumer.prototype[prop]);
+                        const metaData = Reflect.getMetadata(Interfaces_1.AmqpMetadataKeys.AMQP_CONSUMER, consumer.prototype[prop]);
                         const hasConstructor = !!consumer.prototype.constructor;
                         if (metaData) {
                             this.handlersBucket[metaData.queue] = {
@@ -62,11 +62,34 @@ class AmqpServer {
     publishMessage(queue, message) {
         this.channel.sendToQueue(queue, new Buffer(JSON.stringify(message)));
     }
+    useContainer(container, options) {
+        this.container = container;
+    }
+    // tslint:disable-next-line:ban-types
+    getFromContainer(someClass) {
+        if (this.container) {
+            try {
+                const instance = this.container.get(someClass);
+                if (instance) {
+                    return instance;
+                }
+                if (!this.containerOptions || !this.containerOptions.fallback) {
+                    return instance;
+                }
+            }
+            catch (err) {
+                if (!this.containerOptions || !this.containerOptions.fallback) {
+                    throw (err);
+                }
+            }
+        }
+        return this.defaultContainer.get(someClass);
+    }
     buildArgs(target, prop, args) {
-        const dataIndexes = Reflect.getMetadata(consumer_1.AmqpMetadataKeys.AMQP_INJECT_DATA, target, prop) || [];
-        const channelIndexes = Reflect.getMetadata(consumer_1.AmqpMetadataKeys.AMQP_INJECT_CHANNEL, target, prop) || [];
-        const connectionIndexes = Reflect.getMetadata(consumer_1.AmqpMetadataKeys.AMQP_INJECT_CONNECTION, target, prop) || [];
-        const serverIndexes = Reflect.getMetadata(consumer_1.AmqpMetadataKeys.AMQP_INJECT_SERVER, target, prop) || [];
+        const dataIndexes = Reflect.getMetadata(Interfaces_1.AmqpMetadataKeys.AMQP_INJECT_DATA, target, prop) || [];
+        const channelIndexes = Reflect.getMetadata(Interfaces_1.AmqpMetadataKeys.AMQP_INJECT_CHANNEL, target, prop) || [];
+        const connectionIndexes = Reflect.getMetadata(Interfaces_1.AmqpMetadataKeys.AMQP_INJECT_CONNECTION, target, prop) || [];
+        const serverIndexes = Reflect.getMetadata(Interfaces_1.AmqpMetadataKeys.AMQP_INJECT_SERVER, target, prop) || [];
         const arg = {};
         let max = -1;
         dataIndexes.forEach((index) => {

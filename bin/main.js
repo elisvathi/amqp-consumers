@@ -13,9 +13,11 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const AmqpServer_1 = require("./core/AmqpServer");
-const AmqpServerConfig_1 = require("./core/AmqpServerConfig");
-// tslint:disable-next-line:max-line-length
-const consumer_1 = require("./decorators/consumer");
+const AmqpController_1 = require("./decorators/AmqpController");
+const Consumer_1 = require("./decorators/Consumer");
+const InjectChannel_1 = require("./decorators/InjectChannel");
+const InjectConnection_1 = require("./decorators/InjectConnection");
+const InjectData_1 = require("./decorators/InjectData");
 let TestConsumer = class TestConsumer {
     constructor(channel, con) {
         this.channel = channel;
@@ -26,24 +28,24 @@ let TestConsumer = class TestConsumer {
     }
 };
 __decorate([
-    consumer_1.Consumer({ queue: "ELIS_VATHI", consumers: 1 }),
-    __param(0, consumer_1.InjectData()),
+    Consumer_1.Consumer({ queue: "TEST_QUEUE", consumers: 1 }),
+    __param(0, InjectData_1.InjectData()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], TestConsumer.prototype, "testMethod", null);
 TestConsumer = __decorate([
-    consumer_1.AmqpController(),
-    __param(0, consumer_1.InjectChannel()), __param(1, consumer_1.InjectConnection()),
+    AmqpController_1.AmqpController(),
+    __param(0, InjectChannel_1.InjectChannel()), __param(1, InjectConnection_1.InjectConnection()),
     __metadata("design:paramtypes", [Object, Object])
 ], TestConsumer);
 exports.TestConsumer = TestConsumer;
-const config = new AmqpServerConfig_1.AmqpServerConfig();
-config.url = "amqp://localhost";
-config.consumers = [TestConsumer];
-config.exchanges = [{ name: "insta", type: "direct" }];
-const server = new AmqpServer_1.AmqpServer(config);
+const server = new AmqpServer_1.AmqpServer({
+    consumers: [TestConsumer],
+    exchanges: [{ name: "insta", type: "direct" }],
+    url: "amqp://localhost",
+});
 server.initServer().then(() => {
-    server.publishMessage("ELIS_VATHI", { data: "Hello world 3" });
+    server.publishMessage("TEST_QUEUE", { data: "Test Message" });
 });
 //# sourceMappingURL=main.js.map
