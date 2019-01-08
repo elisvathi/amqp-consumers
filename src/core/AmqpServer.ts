@@ -4,34 +4,8 @@ import { Channel, connect, Connection, ConsumeMessage } from "amqplib";
 import { IContainerInjectionMetadata } from "../decorators/ContainerInject";
 import { AmqpMetadataKeys, IConsumerConfig } from "../decorators/Interfaces";
 import { defaultContainer } from "./Container";
-import { IAmqpServerConfig } from "./Interfaces";
-
-export interface IExchangeConfig {
-  name: string;
-  durable?: boolean;
-  internal?: boolean;
-  autoDelete?: boolean;
-  alternateExchange?: string;
-  arguments?: any;
-  type: string;
-}
-export interface IBindingConfig {
-  data?: any;
-}
-export interface IContainerClass<T> {
-  new(...args: any[]): T;
-}
-export interface IContainer {
-  // tslint:disable-next-line:ban-types
-  get<T>(someClass: IContainerClass<T> | Function): T;
-}
-
-export interface IContainerOptions {
-  fallback?: boolean;
-  fallbackOnErrors?: boolean;
-}
-
-declare type ConsumerHandler = (msg: ConsumeMessage | null) => any;
+import { ConsumerHandler, IAmqpServerConfig, IContainer,
+  IContainerClass, IContainerOptions, IExchangeConfig } from "./Interfaces";
 
 export class AmqpServer {
   public connection: Connection;
