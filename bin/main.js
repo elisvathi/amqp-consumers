@@ -13,14 +13,18 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const AmqpServer_1 = require("./core/AmqpServer");
+const custom_1 = require("./custom");
 const AmqpController_1 = require("./decorators/AmqpController");
 const Consumer_1 = require("./decorators/Consumer");
+const ContainerInject_1 = require("./decorators/ContainerInject");
 const InjectChannel_1 = require("./decorators/InjectChannel");
 const InjectConnection_1 = require("./decorators/InjectConnection");
 const InjectData_1 = require("./decorators/InjectData");
 let TestConsumer = class TestConsumer {
-    constructor(channel, con) {
+    // tslint:disable-next-line:max-line-length
+    constructor(channel, con, abc) {
         this.channel = channel;
+        this.abc = abc;
     }
     testMethod(data) {
         console.log("DATA ", data.content.toString());
@@ -36,8 +40,8 @@ __decorate([
 ], TestConsumer.prototype, "testMethod", null);
 TestConsumer = __decorate([
     AmqpController_1.AmqpController(),
-    __param(0, InjectChannel_1.InjectChannel()), __param(1, InjectConnection_1.InjectConnection()),
-    __metadata("design:paramtypes", [Object, Object])
+    __param(0, InjectChannel_1.InjectChannel()), __param(1, InjectConnection_1.InjectConnection()), __param(2, ContainerInject_1.ContainerInject(custom_1.CustomClass)),
+    __metadata("design:paramtypes", [Object, Object, custom_1.CustomClass])
 ], TestConsumer);
 exports.TestConsumer = TestConsumer;
 const server = new AmqpServer_1.AmqpServer({

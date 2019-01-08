@@ -1,15 +1,17 @@
 import { Channel, Connection } from "amqplib";
 import { AmqpServer } from "./core/AmqpServer";
+import { CustomClass } from "./custom";
 import { AmqpController } from "./decorators/AmqpController";
 import { Consumer } from "./decorators/Consumer";
+import { ContainerInject } from "./decorators/ContainerInject";
 import { InjectChannel } from "./decorators/InjectChannel";
 import { InjectConnection } from "./decorators/InjectConnection";
 import { InjectData } from "./decorators/InjectData";
 
 @AmqpController()
 export class TestConsumer {
-  constructor(@InjectChannel() private channel: Channel, @InjectConnection() con: Connection) {
-
+  // tslint:disable-next-line:max-line-length
+  constructor(@InjectChannel() private channel: Channel, @InjectConnection() con: Connection, @ContainerInject(CustomClass) private abc: CustomClass) {
   }
 
   @Consumer({ queue: "TEST_QUEUE", consumers: 1 })

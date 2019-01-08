@@ -2,10 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const amqplib_1 = require("amqplib");
 const Interfaces_1 = require("../decorators/Interfaces");
+const Container_1 = require("./Container");
 class AmqpServer {
     constructor(config) {
         this.config = config;
         this.handlersBucket = {};
+        this.defaultContainer = Container_1.defaultContainer;
     }
     async initServer() {
         if (this.config.consumers) {
@@ -90,6 +92,7 @@ class AmqpServer {
         const channelIndexes = Reflect.getMetadata(Interfaces_1.AmqpMetadataKeys.AMQP_INJECT_CHANNEL, target, prop) || [];
         const connectionIndexes = Reflect.getMetadata(Interfaces_1.AmqpMetadataKeys.AMQP_INJECT_CONNECTION, target, prop) || [];
         const serverIndexes = Reflect.getMetadata(Interfaces_1.AmqpMetadataKeys.AMQP_INJECT_SERVER, target, prop) || [];
+        const customIndexes = Reflect.getMetadata(Interfaces_1.AmqpMetadataKeys.AMQP_INJECT_CUSTOM, target, prop) || [];
         const arg = {};
         let max = -1;
         dataIndexes.forEach((index) => {
@@ -115,6 +118,14 @@ class AmqpServer {
             if (index > max) {
                 max = index;
             }
+        });
+        customIndexes.forEach((data) => {
+            data.indices.forEach((ind) => {
+                arg[ind] = this.getFromContainer(data.type);
+                if (ind > max) {
+                    max = ind;
+                }
+            });
         });
         const finalArgs = [];
         if (max === -1) {

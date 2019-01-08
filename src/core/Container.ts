@@ -1,5 +1,5 @@
 // tslint:disable-next-line:ban-types
-const defaultContainer: { get<T>(someClass: { new(...args: any[]): T } | Function): T } = new (class {
+export const defaultContainer: { get<T>(someClass: { new(...args: any[]): T } | Function): T } = new (class {
   // tslint:disable-next-line:ban-types
   private instances: Array<{ type: Function, object: any }> = [];
   public get<T>(someClass: { new(...args: any[]): T }): T {

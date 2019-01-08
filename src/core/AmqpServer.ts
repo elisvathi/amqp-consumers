@@ -1,6 +1,9 @@
 
 import { Channel, connect, Connection, ConsumeMessage } from "amqplib";
+
+import { IContainerInjectionMetadata } from "../decorators/ContainerInject";
 import { AmqpMetadataKeys, IConsumerConfig } from "../decorators/Interfaces";
+import { defaultContainer } from "./Container";
 import { IAmqpServerConfig } from "./Interfaces";
 
 export interface IExchangeConfig {
@@ -35,7 +38,7 @@ export class AmqpServer {
   public channel: Channel;
   public handlersBucket: { [queue: string]: { handler: ConsumerHandler, config: IConsumerConfig } } = {};
   private container: IContainer;
-  private defaultContainer: IContainer;
+  private defaultContainer: IContainer = defaultContainer;
   private containerOptions: IContainerOptions;
   constructor(private config: IAmqpServerConfig) { }
 
@@ -122,6 +125,7 @@ export class AmqpServer {
     const channelIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_CHANNEL, target, prop) || [];
     const connectionIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_CONNECTION, target, prop) || [];
     const serverIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_SERVER, target, prop) || [];
+    const customIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_CUSTOM, target, prop) || [];
     const arg: any = {};
     let max = -1;
     dataIndexes.forEach((index: number) => {
@@ -139,6 +143,12 @@ export class AmqpServer {
     serverIndexes.forEach((index: number) => {
       arg[index] = this;
       if (index > max) { max = index; }
+    });
+    customIndexes.forEach((data: IContainerInjectionMetadata) => {
+      data.indices.forEach((ind: number) => {
+        arg[ind] = this.getFromContainer(data.type);
+        if (ind > max) { max = ind; }
+      });
     });
     const finalArgs: any[] = [];
     if (max === -1) { return finalArgs; }
