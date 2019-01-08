@@ -1,8 +1,7 @@
 {
   "name": "amqp-consumers",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "\"Amqp server with typescript decorators\"",
-  "main": "bin/main.js",
   "scripts": {
     "start": "npm run build && node --inspect=0.0.0.0:5858 ./bin/main.js",
     "dev": "nodemon",
@@ -27,9 +26,6 @@
     "tslib": "^1.9.3",
     "typescript": "^3.2.2",
     "uuid": "^3.3.2"
-  },
-  "bin": {
-    "amqp-consumers": "bin/main.js"
   },
   "devDependencies": {
     "@types/amqplib": "^0.5.9",
