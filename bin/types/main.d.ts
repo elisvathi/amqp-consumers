@@ -9,3 +9,4 @@ export * from "../src/decorators/InjectConnection";
 export * from "../src/decorators/InjectData";
 export * from "../src/decorators/InjectServer";
 export * from "../src/decorators/Interfaces";
+//# sourceMappingURL=main.d.ts.map

@@ -7,4 +7,3 @@ function AmqpController(config) {
     };
 }
 exports.AmqpController = AmqpController;
-//# sourceMappingURL=AmqpController.js.map

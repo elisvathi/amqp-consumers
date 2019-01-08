@@ -5,6 +5,9 @@
     "target": "es2018",
     "lib": ["es2018", "dom"],
     "types": ["reflect-metadata", "node"],
+    "declaration": true,
+    "declarationMap": true,
+    "declarationDir": "bin/types",
     "module": "commonjs",
     "moduleResolution": "node",
     "experimentalDecorators": true,
@@ -16,7 +19,7 @@
     "noUnusedParameters": false,
     "noUnusedLocals": false,
     "strictNullChecks": true,
-    "sourceMap": true,
+    "sourceMap": false,
     "outDir": "./bin",
     "allowSyntheticDefaultImports": true
   },

@@ -7,4 +7,3 @@ function Consumer(config) {
     };
 }
 exports.Consumer = Consumer;
-//# sourceMappingURL=Consumer.js.map

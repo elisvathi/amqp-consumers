@@ -9,4 +9,3 @@ function InjectChannel() {
     };
 }
 exports.InjectChannel = InjectChannel;
-//# sourceMappingURL=InjectChannel.js.map

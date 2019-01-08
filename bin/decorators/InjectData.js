@@ -9,4 +9,3 @@ function InjectData() {
     };
 }
 exports.InjectData = InjectData;
-//# sourceMappingURL=InjectData.js.map

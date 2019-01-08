@@ -15,4 +15,3 @@ function ContainerInject(clazz) {
     };
 }
 exports.ContainerInject = ContainerInject;
-//# sourceMappingURL=ContainerInject.js.map

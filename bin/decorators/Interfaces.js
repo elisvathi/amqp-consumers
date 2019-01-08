@@ -16,4 +16,3 @@ class IControllerConfig {
     }
 }
 exports.IControllerConfig = IControllerConfig;
-//# sourceMappingURL=Interfaces.js.map

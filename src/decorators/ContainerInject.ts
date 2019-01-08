@@ -1,4 +1,4 @@
-import { IContainerClass } from "../core/AmqpServer";
+import { IContainerClass } from "../core/Interfaces";
 import { AmqpMetadataKeys } from "./Interfaces";
 export interface IContainerInjectionMetadata {type: IContainerClass<any> ; indices: number[]; }
 export function ContainerInject<T>(clazz: IContainerClass<T>) {

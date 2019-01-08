@@ -15,4 +15,3 @@ exports.defaultContainer = new (class {
         return instance.object;
     }
 })();
-//# sourceMappingURL=Container.js.map

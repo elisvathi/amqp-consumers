@@ -1,6 +1,6 @@
 {
   "name": "amqp-consumers",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "\"Amqp server with typescript decorators\"",
   "main": "bin/main.js",
   "scripts": {
@@ -12,13 +12,18 @@
     "test": "mocha -r ts-node/register tests/**/*.spec.ts",
     "clean": "./node_modules/rimraf/bin.js bin"
   },
-  "keywords": ["amqp", "typescript", "rabbitmq", "decorators"],
+  "keywords": [
+    "amqp",
+    "typescript",
+    "rabbitmq",
+    "decorators"
+  ],
   "author": "Elis Vathi",
   "license": "MIT",
-  
   "dependencies": {
     "amqplib": "^0.5.3",
     "reflect-metadata": "^0.1.12",
+    "rimraf": "^2.6.3",
     "tslib": "^1.9.3",
     "typescript": "^3.2.2",
     "uuid": "^3.3.2"

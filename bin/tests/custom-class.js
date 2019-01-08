@@ -9,4 +9,3 @@ class CustomClass {
     }
 }
 exports.CustomClass = CustomClass;
-//# sourceMappingURL=custom.js.map

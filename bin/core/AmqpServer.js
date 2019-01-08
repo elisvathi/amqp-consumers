@@ -158,4 +158,3 @@ class AmqpServer {
     }
 }
 exports.AmqpServer = AmqpServer;
-//# sourceMappingURL=AmqpServer.js.map
