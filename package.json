@@ -4,7 +4,7 @@
   "main": "lib/index.js",
   "description": "\"Amqp server with typescript decorators\"",
   "scripts": {
-    "start": "npm run build && node --inspect=0.0.0.0:5858 ./lib/main.js",
+    "start": "npm run build && node --inspect=0.0.0.0:5858 ./lib/tests/intial-tests.js",
     "dev": "nodemon",
     "build": "./node_modules/typescript/bin/tsc -p tsconfig.json",
     "build:watch": "./node_modules/typescript/bin/tsc -w -p tsconfig.json",

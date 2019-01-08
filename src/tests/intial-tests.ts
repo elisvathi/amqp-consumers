@@ -14,7 +14,7 @@ export class TestConsumer {
   constructor(@InjectChannel() private channel: Channel, @InjectConnection() con: Connection, @ContainerInject(CustomClass) private abc: CustomClass) {
   }
 
-  @Consumer({ queue: "TEST_QUEUE", consumers: 1 })
+  @Consumer({ queue: "TEST_QUEUE_2", consumers: 1 })
   public testMethod(@InjectData() data: any) {
     console.log("DATA ", data.content.toString());
     this.channel.ack(data);
@@ -28,5 +28,5 @@ const server = new AmqpServer({
 });
 
 server.initServer().then(() => {
-  server.publishMessage("TEST_QUEUE", { data: "Test Message" });
+  server.publishMessage("TEST_QUEUE_2", { data: "Test Message" });
 });
