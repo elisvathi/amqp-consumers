@@ -20,7 +20,7 @@ export class AmqpServer {
     if (this.config.consumers) {
       this.config.consumers.forEach((consumer) => {
         const consumerMetadata = Reflect.getMetadata(AmqpMetadataKeys.AMQP_CONTROLLER, consumer);
-        if (consumer) {
+        if (consumerMetadata) {
           const props = Object.getOwnPropertyNames(consumer.prototype);
           props.forEach((prop) => {
             const metaData: IConsumerConfig =

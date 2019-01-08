@@ -1,15 +1,16 @@
 {
   "name": "amqp-consumers",
-  "version": "1.0.7",
+  "version": "1.0.8",
+  "main": "lib/index.js",
   "description": "\"Amqp server with typescript decorators\"",
   "scripts": {
-    "start": "npm run build && node --inspect=0.0.0.0:5858 ./bin/main.js",
+    "start": "npm run build && node --inspect=0.0.0.0:5858 ./lib/main.js",
     "dev": "nodemon",
     "build": "./node_modules/typescript/bin/tsc -p tsconfig.json",
     "build:watch": "./node_modules/typescript/bin/tsc -w -p tsconfig.json",
     "lint": "./node_modules/tslint/bin/tslint -t stylish --project \"tsconfig.json\"",
     "test": "mocha -r ts-node/register tests/**/*.spec.ts",
-    "clean": "./node_modules/rimraf/bin.js bin"
+    "clean": "./node_modules/rimraf/bin.js lib"
   },
   "keywords": [
     "amqp",
@@ -22,12 +23,12 @@
   "dependencies": {
     "amqplib": "^0.5.3",
     "reflect-metadata": "^0.1.12",
-    "rimraf": "^2.6.3",
-    "tslib": "^1.9.3",
-    "typescript": "^3.2.2",
     "uuid": "^3.3.2"
   },
   "devDependencies": {
+    "typescript": "^3.2.2",
+    "rimraf": "^2.6.3",
+    "tslib": "^1.9.3",
     "@types/amqplib": "^0.5.9",
     "@types/uuid": "^3.4.4"
   },

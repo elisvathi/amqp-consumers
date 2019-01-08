@@ -7,7 +7,6 @@
     "types": ["reflect-metadata", "node"],
     "declaration": true,
     "declarationMap": true,
-    "declarationDir": "bin/types",
     "module": "commonjs",
     "moduleResolution": "node",
     "experimentalDecorators": true,
@@ -20,7 +19,7 @@
     "noUnusedLocals": false,
     "strictNullChecks": true,
     "sourceMap": false,
-    "outDir": "./bin",
+    "outDir": "./lib",
     "allowSyntheticDefaultImports": true
   },
   "include": [
