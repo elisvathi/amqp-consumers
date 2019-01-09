@@ -1,1 +1,0 @@
-{"version":3,"file":"AmqpController.d.ts","sourceRoot":"","sources":["../../src/decorators/AmqpController.ts"],"names":[],"mappings":"AAAA,OAAO,EAAoB,gBAAgB,EAAE,MAAM,cAAc,CAAC;AAClE,wBAAgB,cAAc,CAAC,CAAC,SAAS;IACvC,KAAI,GAAG,IAAI,EAAE,GAAG,EAAE,GAAG,EAAE,CAAC;CACzB,EAAE,MAAM,CAAC,EAAE,gBAAgB,uBAK3B"}
