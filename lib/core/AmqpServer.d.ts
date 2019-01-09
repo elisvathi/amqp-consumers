@@ -18,7 +18,7 @@ export declare class AmqpServer {
     initServer(): Promise<void>;
     assertQueues(): Promise<void>;
     assertExchanges(): Promise<void>;
-    publishMessage(queue: string, message: any): void;
+    publishMessage(queue: string, message: any, json?: boolean): void;
     useContainer(container: IContainer, options?: IContainerOptions): void;
     private getFromContainer;
     private buildArgs;

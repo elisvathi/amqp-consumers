@@ -2,10 +2,13 @@
 import { Channel, connect, Connection, ConsumeMessage } from "amqplib";
 
 import { IContainerInjectionMetadata } from "../decorators/ContainerInject";
-import { AmqpMetadataKeys, IConsumerConfig } from "../decorators/Interfaces";
+import { AmqpMetadataKeys, ControllerConfig, IConsumerConfig } from "../decorators/Interfaces";
+import { AmqpMessage } from "./AmqpMessage";
 import { defaultContainer } from "./Container";
-import { ConsumerHandler, IAmqpServerConfig, IContainer,
-  IContainerClass, IContainerOptions, IExchangeConfig } from "./Interfaces";
+import {
+  ConsumerHandler, IAmqpServerConfig, IContainer,
+  IContainerClass, IContainerOptions, IExchangeConfig,
+} from "./Interfaces";
 
 export class AmqpServer {
   public connection: Connection;
@@ -19,23 +22,24 @@ export class AmqpServer {
   public async initServer() {
     if (this.config.consumers) {
       this.config.consumers.forEach((consumer) => {
-        const consumerMetadata = Reflect.getMetadata(AmqpMetadataKeys.AMQP_CONTROLLER, consumer);
-        if (consumer) {
+        const consumerMetadata: ControllerConfig = Reflect.getMetadata(AmqpMetadataKeys.AMQP_CONTROLLER, consumer);
+        if (consumerMetadata) {
           const props = Object.getOwnPropertyNames(consumer.prototype);
           props.forEach((prop) => {
             const metaData: IConsumerConfig =
               Reflect.getMetadata(AmqpMetadataKeys.AMQP_CONSUMER, consumer.prototype[prop]);
             const hasConstructor = !!consumer.prototype.constructor;
             if (metaData) {
+              metaData.json = consumerMetadata.json;
               this.handlersBucket[metaData.queue] = {
-                config: metaData, handler: (args: any) => {
+                config: metaData, handler: (args: ConsumeMessage) => {
                   let instance;
                   if (hasConstructor) {
-                    instance = this.buildController(consumer, args);
+                    instance = this.buildController(consumer, new AmqpMessage(args));
                   } else {
                     instance = new consumer();
                   }
-                  const finalArgs = this.buildArgs(instance, prop, args);
+                  const finalArgs = this.buildArgs(instance, prop, new AmqpMessage(args));
                   return instance[prop](...finalArgs);
                 },
               };
@@ -69,8 +73,9 @@ export class AmqpServer {
     });
   }
 
-  public publishMessage(queue: string, message: any) {
-    this.channel.sendToQueue(queue, new Buffer(JSON.stringify(message)));
+  public publishMessage(queue: string, message: any, json: boolean = true) {
+    const finalMessage = json ? JSON.stringify(message) : message;
+    this.channel.sendToQueue(queue, new Buffer(finalMessage));
   }
   public useContainer(container: IContainer, options?: IContainerOptions) {
     this.container = container;
@@ -94,7 +99,7 @@ export class AmqpServer {
     return this.defaultContainer.get<T>(someClass);
   }
 
-  private buildArgs(target: any, prop?: any, args?: any) {
+  private buildArgs(target: any, prop?: any, args?: ConsumeMessage) {
     const dataIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_DATA, target, prop) || [];
     const channelIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_CHANNEL, target, prop) || [];
     const connectionIndexes = Reflect.getMetadata(AmqpMetadataKeys.AMQP_INJECT_CONNECTION, target, prop) || [];

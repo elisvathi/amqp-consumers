@@ -1,0 +1,1 @@
+{"version":3,"file":"AmqpMessage.d.ts","sourceRoot":"","sources":["../../src/core/AmqpMessage.ts"],"names":[],"mappings":";AAAA,OAAO,EAAE,cAAc,EAAE,oBAAoB,EAAE,OAAO,EAAE,iBAAiB,EAAE,MAAM,SAAS,CAAC;AAC3F,qBAAa,WAAW,CAAC,CAAC,CAAE,YAAW,cAAc;IAC5C,OAAO,EAAE,MAAM,CAAC;IAChB,MAAM,EAAE,oBAAoB,CAAC;IAC7B,UAAU,EAAE,iBAAiB,CAAC;gBACzB,OAAO,EAAE,OAAO;IAKrB,GAAG;CAGX"}

@@ -8,11 +8,12 @@ export declare const AmqpMetadataKeys: {
     AMQP_INJECT_DATA: string;
     AMQP_INJECT_SERVER: string;
 };
-export declare class IControllerConfig {
+export declare class ControllerConfig {
     json: boolean;
 }
 export interface IConsumerConfig {
     queue: string;
+    json?: boolean;
     consumers?: number;
     consumerTag?: string;
     noLocal?: boolean;

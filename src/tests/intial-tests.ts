@@ -1,4 +1,5 @@
 import { Channel, Connection } from "amqplib";
+import { AmqpMessage } from "../core/AmqpMessage";
 import { AmqpServer } from "../core/AmqpServer";
 import { AmqpController } from "../decorators/AmqpController";
 import { Consumer } from "../decorators/Consumer";
@@ -15,8 +16,8 @@ export class TestConsumer {
   }
 
   @Consumer({ queue: "TEST_QUEUE_2", consumers: 1 })
-  public testMethod(@InjectData() data: any) {
-    console.log("DATA ", data.content.toString());
+  public testMethod(@InjectData() data: AmqpMessage<{ data: string }>) {
+    console.log("DATA ", data.get().data);
     this.channel.ack(data);
   }
 }

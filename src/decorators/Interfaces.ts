@@ -10,12 +10,13 @@ export const AmqpMetadataKeys = {
   AMQP_INJECT_SERVER: "amqpInjectServer",
 };
 
-export class IControllerConfig {
+export class ControllerConfig {
   public json: boolean = true;
 }
 
 export interface IConsumerConfig {
   queue: string;
+  json?: boolean;
   consumers?: number;
   consumerTag?: string;
   noLocal?: boolean;
