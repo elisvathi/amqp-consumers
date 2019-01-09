@@ -1,6 +1,7 @@
 export * from "./core/AmqpServer";
 export * from "./core/Container";
 export * from "./core/Interfaces";
+export * from "./core/AmqpMessage";
 
 export * from "./decorators/AmqpController";
 export * from "./decorators/Consumer";
