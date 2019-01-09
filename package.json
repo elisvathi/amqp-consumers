@@ -1,6 +1,6 @@
 {
   "name": "amqp-consumers",
-  "version": "1.0.8",
+  "version": "1.0.10",
   "main": "lib/index.js",
   "description": "\"Amqp server with typescript decorators\"",
   "scripts": {
