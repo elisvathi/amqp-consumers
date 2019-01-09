@@ -8,7 +8,7 @@ export class AmqpMessage<T> implements ConsumeMessage {
     this.fields = message.fields;
     this.properties = message.properties;
   }
-  public get() {
+  public get(): T {
     return JSON.parse(this.content.toString()) as T;
   }
 }
