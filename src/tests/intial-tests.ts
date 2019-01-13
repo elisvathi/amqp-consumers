@@ -17,8 +17,9 @@ export class TestConsumer {
 
   @Consumer({ queue: "TEST_QUEUE_2", consumers: 1 })
   public testMethod(@InjectData() data: AmqpMessage<{ data: string }>) {
-    console.log("DATA ", data.get().data);
+    console.log("DATA", data.get().data);
     this.channel.ack(data);
+    return {data: "ok"};
   }
 }
 
@@ -29,5 +30,8 @@ const server = new AmqpServer({
 });
 
 server.initServer().then(() => {
-  server.publishMessage("TEST_QUEUE_2", { data: "Test Message" });
+  server.rpc("TEST_QUEUE_2", {data: "Test MEssage 33"}).then((r) => {
+    console.log("GOT RPC MESSAGE", r.message.get());
+  }).catch(console.log);
+  // server.publishMessage("TEST_QUEUE_2", { data: "Test Message 2" });
 });

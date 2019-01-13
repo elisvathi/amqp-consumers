@@ -2,6 +2,7 @@ import { ConsumeMessage, Options } from "amqplib";
 
 export interface IAmqpServerConfig {
   url: string | Options.Connect;
+  rpcQueues?: string | string[];
   consumers: any[];
   exchanges: IExchangeConfig[];
 }
@@ -31,3 +32,8 @@ export interface IContainerOptions {
 }
 
 export declare type ConsumerHandler = (msg: ConsumeMessage | null) => any;
+
+export interface IRpcQueueConfig {
+  queue: string;
+  uniqueId: string;
+}
