@@ -48,18 +48,34 @@ export class AmqpServer {
                     instance = new consumer();
                   }
                   const finalArgs = this.buildArgs(instance, prop, new AmqpMessage(args));
-                  const method = instance[prop](...finalArgs);
-                  let finalResult;
-                  if (isPromiseLike(method)) {
-                    finalResult = await method;
-                  } else {
-                    finalResult = method;
+                  try {
+                    const method = instance[prop](...finalArgs);
+                    let finalResult;
+                    const headers: any = {};
+                    if (isPromiseLike(method)) {
+                      try {
+                        finalResult = await method;
+                      } catch (err) {
+                        finalResult = err;
+                        headers.error = true;
+                      }
+                    } else {
+                      finalResult = method;
+                    }
+                    if (args.properties.replyTo && args.properties.correlationId) {
+                      if (!finalResult) { finalResult = {}; }
+                      await this.channel.sendToQueue(args.properties.replyTo, new Buffer(JSON.stringify(finalResult)),
+                        { correlationId: args.properties.correlationId, headers });
+                    }
+                    return finalResult;
+                  } catch (err) {
+                    if (args.properties.replyTo && args.properties.correlationId) {
+                      if (!err) { err = {}; }
+                      await this.channel.sendToQueue(args.properties.replyTo, new Buffer(JSON.stringify(err)),
+                        { correlationId: args.properties.correlationId, headers: { error: true } });
+                    }
+                    throw err;
                   }
-                  if (args.properties.replyTo && args.properties.correlationId) {
-                    await this.channel.sendToQueue(args.properties.replyTo, new Buffer(JSON.stringify(finalResult)),
-                      { correlationId: args.properties.correlationId });
-                  }
-                  return finalResult;
                 },
               };
             }
@@ -75,16 +91,16 @@ export class AmqpServer {
     console.log("AMQP Server initialized");
   }
 
-  public publishMessage(queue: string, message: any, json: boolean = true) {
+  public async publishMessage(queue: string, message: any, json: boolean = true) {
     const finalMessage = json ? JSON.stringify(message) : message;
-    this.channel.sendToQueue(queue, new Buffer(finalMessage));
+    return this.channel.sendToQueue(queue, new Buffer(finalMessage));
   }
   public useContainer(container: IContainer, options?: IContainerOptions) {
     this.container = container;
   }
 
   public async rpc<T>(queue: string, message: any, json: boolean = true, replyTo?: string) {
-    return new Promise<IRpcResponse<T>>(async (resolve, reject) => {
+    return new Promise<AmqpMessage<T>>(async (resolve, reject) => {
       const finalMessage = json ? JSON.stringify(message) : message;
       const correlationId = uuid4();
       if (replyTo && this.rpcQueues.findIndex((x) => x.queue === replyTo) > -1) {
@@ -94,9 +110,10 @@ export class AmqpServer {
       const replyToQueue = this.rpcQueues.find((x) => x.queue === replyTo);
       if (replyToQueue) {
         this.rpcObservable.rpcSubscribe(`${replyToQueue.queue}.${replyToQueue.uniqueId}`,
-          correlationId, (data) => { resolve(data); }, (error) => { reject(error); });
+          correlationId, (data) => { resolve(data.message); }, (error) => { reject(error); });
         await this.channel.sendToQueue(queue, new Buffer(finalMessage), {
           correlationId,
+          persistent: false,
           replyTo: `${replyToQueue.queue}.${replyToQueue.uniqueId}`,
         });
       } else {
@@ -145,7 +162,7 @@ export class AmqpServer {
       this.rpcQueues.push({ queue: "rpc_reply", uniqueId: uuid4() });
     }
     this.rpcQueues.forEach(async (q) => {
-      await this.channel.assertQueue(`${q.queue}.${q.uniqueId}`);
+      await this.channel.assertQueue(`${q.queue}.${q.uniqueId}`, { durable: false, autoDelete: true });
     });
   }
 
@@ -225,12 +242,16 @@ export class AmqpServer {
     this.rpcQueues.forEach((q) => {
       const key = `${q.queue}.${q.uniqueId}`;
       this.channel.consume(key, (msg: ConsumeMessage) => {
+        if (msg.properties.headers.error) {
+          this.rpcObservable.notifyError({
+            message: new AmqpMessage<any>(msg),
+            queue: key,
+          });
+        } else {
         this.rpcObservable.notifySuccess({
-          channel: this.channel,
-          connection: this.connection,
           message: new AmqpMessage<any>(msg),
           queue: key,
-        });
+        }); }
       });
     });
   }

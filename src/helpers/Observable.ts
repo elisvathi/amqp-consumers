@@ -47,7 +47,5 @@ export class Observable<T> {
 
 export interface IRpcResponse<T> {
   message: AmqpMessage<T>;
-  channel: Channel;
-  connection: Connection;
   queue: string;
 }
