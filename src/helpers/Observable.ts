@@ -1,4 +1,3 @@
-import { Channel, Connection } from "amqplib";
 import { AmqpMessage } from "../core/AmqpMessage";
 export declare interface ISubscriptionHandlers<T> {
   onSuccess?: (data: T) => void;
@@ -8,7 +7,7 @@ export declare interface ISubscriptionHandlers<T> {
 
 export class Observable<T> {
   public once = true;
-  private subscribers: Array<ISubscriptionHandlers<T>> = [];
+  protected subscribers: Array<ISubscriptionHandlers<T>> = [];
   public subscribe(handlers: ISubscriptionHandlers<T>): void {
     this.subscribers.push(handlers);
   }
@@ -20,27 +19,35 @@ export class Observable<T> {
   }
 
   public notifySuccess(success: T) {
-    this.subscribers.forEach((subscriber) => {
+    const toRemove: number[] = [];
+    this.subscribers.forEach((subscriber, index: number) => {
       if (!subscriber.verification || subscriber.verification(success)) {
         if (subscriber.onSuccess) {
           subscriber.onSuccess(success);
           if (this.once) {
-            this.unsubscribe(subscriber);
+            toRemove.push(index);
           }
         }
       }
     });
+    toRemove.forEach((i) => {
+      this.subscribers.splice(i, 1);
+    });
   }
-  public notifyError(error: any) {
-    this.subscribers.forEach((subscriber) => {
-      if (!subscriber.verification || subscriber.verification(error)) {
+  public notifyError(error: any, verification= true) {
+    const toRemove: number[] = [];
+    this.subscribers.forEach((subscriber, index: number) => {
+      if (!subscriber.verification || !verification || subscriber.verification(error)) {
         if (subscriber.onError) {
           subscriber.onError(error);
           if (this.once) {
-            this.unsubscribe(subscriber);
+            toRemove.push(index);
           }
         }
       }
+    });
+    toRemove.forEach((i) => {
+      this.subscribers.splice(i, 1);
     });
   }
 }

@@ -2,9 +2,17 @@ import { ConsumeMessage, Options } from "amqplib";
 
 export interface IAmqpServerConfig {
   url: string | Options.Connect;
-  rpcQueues?: string | string[];
-  consumers: any[];
-  exchanges: IExchangeConfig[];
+  rpcQueues?: IRpcQueueDeclaration | IRpcQueueDeclaration[];
+  /**
+   * Insert the types annotated with AmqpConsumer
+   */
+  consumers?: any[];
+  /**
+   * The queues annotated in consumers don't need to be inserted here
+   */
+  extraQueues?: string[];
+  exchanges?: IExchangeConfig[];
+  defaultRpcTimeout?: number;
 }
 export interface IExchangeConfig {
   name: string;
@@ -33,7 +41,10 @@ export interface IContainerOptions {
 
 export declare type ConsumerHandler = (msg: ConsumeMessage | null) => any;
 
+export interface IRpcQueueDeclaration { queue: string; timeout?: number; }
+
 export interface IRpcQueueConfig {
   queue: string;
   uniqueId: string;
+  timeout: number;
 }

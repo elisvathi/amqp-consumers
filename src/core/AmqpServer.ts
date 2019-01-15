@@ -1,13 +1,10 @@
 
 import { Channel, connect, Connection, ConsumeMessage } from "amqplib";
-import { any } from "bluebird";
-import { IRpcResponse, Observable } from "../helpers/Observable";
-import { RpcObservable } from "../helpers/RpcObservable";
-
 import { v4 as uuid4 } from "uuid";
 import { IContainerInjectionMetadata } from "../decorators/ContainerInject";
 import { AmqpMetadataKeys, ControllerConfig, IConsumerConfig } from "../decorators/Interfaces";
 import { isPromiseLike } from "../helpers/isPromiseLike";
+import { RpcObservable } from "../helpers/RpcObservable";
 import { AmqpMessage } from "./AmqpMessage";
 import { defaultContainer } from "./Container";
 import { IRpcQueueConfig } from "./Interfaces";
@@ -25,7 +22,10 @@ export class AmqpServer {
   private containerOptions: IContainerOptions;
   private rpcQueues: IRpcQueueConfig[] = [];
   private rpcObservable = new RpcObservable<any>();
-  constructor(private config: IAmqpServerConfig) { }
+  private defaultRpcTimeout: number;
+  constructor(private config: IAmqpServerConfig) {
+    this.defaultRpcTimeout = this.config.defaultRpcTimeout || 60000;
+  }
 
   public async initServer() {
     if (this.config.consumers) {
@@ -95,7 +95,7 @@ export class AmqpServer {
     const finalMessage = json ? JSON.stringify(message) : message;
     return this.channel.sendToQueue(queue, new Buffer(finalMessage));
   }
-  public useContainer(container: IContainer, options?: IContainerOptions) {
+  public useContainer(container: IContainer) {
     this.container = container;
   }
 
@@ -110,7 +110,22 @@ export class AmqpServer {
       const replyToQueue = this.rpcQueues.find((x) => x.queue === replyTo);
       if (replyToQueue) {
         this.rpcObservable.rpcSubscribe(`${replyToQueue.queue}.${replyToQueue.uniqueId}`,
-          correlationId, (data) => { resolve(data.message); }, (error) => { reject(error); });
+          correlationId,
+          replyToQueue.timeout,
+          (data) => {
+            this.channel.ack(data.message);
+            resolve(data.message);
+          },
+          (error) => {
+            if (error.message) {
+              try {
+                this.channel.ack(error.message);
+              } catch (err) {
+                console.log("[AMQP] failed to ack message");
+              }
+            }
+            reject(error);
+          });
         await this.channel.sendToQueue(queue, new Buffer(finalMessage), {
           correlationId,
           persistent: false,
@@ -126,15 +141,17 @@ export class AmqpServer {
     return this.rpcQueues[0].queue;
   }
   private async assertExchanges() {
-    this.config.exchanges.forEach(async (exchange: IExchangeConfig) => {
-      this.channel.assertExchange(exchange.name, exchange.type, {
-        alternateExchange: exchange.alternateExchange,
-        arguments: exchange.arguments,
-        autoDelete: exchange.autoDelete,
-        durable: exchange.durable,
-        internal: exchange.internal,
+    if (this.config.exchanges) {
+      this.config.exchanges.forEach(async (exchange: IExchangeConfig) => {
+        this.channel.assertExchange(exchange.name, exchange.type, {
+          alternateExchange: exchange.alternateExchange,
+          arguments: exchange.arguments,
+          autoDelete: exchange.autoDelete,
+          durable: exchange.durable,
+          internal: exchange.internal,
+        });
       });
-    });
+    }
   }
   private async assertQueues() {
     const queues = Object.keys(this.handlersBucket);
@@ -150,16 +167,32 @@ export class AmqpServer {
       if (rpcQueues instanceof Array) {
         if (rpcQueues.length) {
           rpcQueues.forEach((x) => {
-            this.rpcQueues.push({ queue: x, uniqueId: uuid4() });
+            this.rpcQueues.push({
+              queue: x.queue,
+              timeout: x.timeout || this.defaultRpcTimeout,
+              uniqueId: uuid4(),
+            });
           });
         } else {
-          this.rpcQueues.push({ queue: "rpc_reply", uniqueId: uuid4() });
+          this.rpcQueues.push({
+            queue: "rpc_reply",
+            timeout: this.defaultRpcTimeout,
+            uniqueId: uuid4(),
+          });
         }
       } else {
-        this.rpcQueues.push({ queue: rpcQueues, uniqueId: uuid4() });
+        this.rpcQueues.push({
+          queue: rpcQueues.queue,
+          timeout: rpcQueues.timeout || this.defaultRpcTimeout,
+          uniqueId: uuid4(),
+        });
       }
     } else {
-      this.rpcQueues.push({ queue: "rpc_reply", uniqueId: uuid4() });
+      this.rpcQueues.push({
+        queue: "rpc_reply",
+        timeout: this.defaultRpcTimeout,
+        uniqueId: uuid4(),
+      });
     }
     this.rpcQueues.forEach(async (q) => {
       await this.channel.assertQueue(`${q.queue}.${q.uniqueId}`, { durable: false, autoDelete: true });
@@ -248,11 +281,12 @@ export class AmqpServer {
             queue: key,
           });
         } else {
-        this.rpcObservable.notifySuccess({
-          message: new AmqpMessage<any>(msg),
-          queue: key,
-        }); }
-      });
+          this.rpcObservable.notifySuccess({
+            message: new AmqpMessage<any>(msg),
+            queue: key,
+          });
+        }
+      }, { noAck: false });
     });
   }
 
