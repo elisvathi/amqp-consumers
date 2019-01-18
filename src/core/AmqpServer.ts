@@ -7,7 +7,7 @@ import { isPromiseLike } from "../helpers/isPromiseLike";
 import { RpcObservable } from "../helpers/RpcObservable";
 import { AmqpMessage } from "./AmqpMessage";
 import { defaultContainer } from "./Container";
-import { IRpcQueueConfig } from "./Interfaces";
+import { IBindingConfig, IRpcQueueConfig } from "./Interfaces";
 import {
   ConsumerHandler, IAmqpServerConfig, IContainer,
   IContainerClass, IContainerOptions, IExchangeConfig,
@@ -23,11 +23,71 @@ export class AmqpServer {
   private rpcQueues: IRpcQueueConfig[] = [];
   private rpcObservable = new RpcObservable<any>();
   private defaultRpcTimeout: number;
+
   constructor(private config: IAmqpServerConfig) {
     this.defaultRpcTimeout = this.config.defaultRpcTimeout || 60000;
   }
 
   public async initServer() {
+    await this.buildConsumers();
+    this.connection = await connect(this.config.url);
+    this.channel = await this.connection.createChannel();
+    await this.assertQueues();
+    await this.assertExchanges();
+    await this.bindQueues();
+    this.bindConsumers();
+    console.log("AMQP Server initialized");
+  }
+
+  public async publishMessage(queue: string, message: any, json: boolean = true) {
+    const finalMessage = json ? JSON.stringify(message) : message;
+    return this.channel.sendToQueue(queue, new Buffer(finalMessage));
+  }
+
+  public useContainer(container: IContainer) {
+    this.container = container;
+  }
+
+  public async rpc<T>(queue: string, message: any, replyTo?: string, json: boolean = true) {
+    console.log(replyTo);
+    return new Promise<AmqpMessage<T>>(async (resolve, reject) => {
+      const finalMessage = json ? JSON.stringify(message) : message;
+      const correlationId = uuid4();
+      if (replyTo && this.rpcQueues.findIndex((x) => x.queue === replyTo) < 0) {
+        reject(`Please register the the replyTo queue "${replyTo}" to AmqpServer config`);
+      }
+      replyTo = replyTo || this.getDefaultRpcQueue();
+      const replyToQueue = this.rpcQueues.find((x) => x.queue === replyTo);
+      if (replyToQueue) {
+        this.rpcObservable.rpcSubscribe(`${replyToQueue.queue}.${replyToQueue.uniqueId}`,
+          correlationId,
+          replyToQueue.timeout,
+          (data) => {
+            this.channel.ack(data.message);
+            resolve(data.message);
+          },
+          (error) => {
+            if (error.message) {
+              try {
+                this.channel.ack(error.message);
+              } catch (err) {
+                console.log("[AMQP] failed to ack message");
+              }
+            }
+            reject(error);
+          });
+        await this.channel.sendToQueue(queue, new Buffer(finalMessage), {
+          correlationId,
+          persistent: false,
+          replyTo: `${replyToQueue.queue}.${replyToQueue.uniqueId}`,
+        });
+      } else {
+        reject(`Please register the the replyTo queue "${replyTo}" to AmqpServer config`);
+      }
+    });
+  }
+
+  private async buildConsumers() {
     if (this.config.consumers) {
       this.config.consumers.forEach((consumer) => {
         const consumerMetadata: ControllerConfig = Reflect.getMetadata(AmqpMetadataKeys.AMQP_CONTROLLER, consumer);
@@ -83,63 +143,26 @@ export class AmqpServer {
         }
       });
     }
-    this.connection = await connect(this.config.url);
-    this.channel = await this.connection.createChannel();
-    await this.assertQueues();
-    await this.assertExchanges();
-    this.bindConsumers();
-    console.log("AMQP Server initialized");
   }
 
-  public async publishMessage(queue: string, message: any, json: boolean = true) {
-    const finalMessage = json ? JSON.stringify(message) : message;
-    return this.channel.sendToQueue(queue, new Buffer(finalMessage));
-  }
-  public useContainer(container: IContainer) {
-    this.container = container;
+  private async bindQueues() {
+    if (this.config.bindings) {
+      // tslint:disable-next-line:prefer-for-of
+      for (let i = 0; i < this.config.bindings.length; i++) {
+        const binding: IBindingConfig = this.config.bindings[i];
+        await this.bindQueue(binding);
+      }
+    }
   }
 
-  public async rpc<T>(queue: string, message: any, json: boolean = true, replyTo?: string) {
-    return new Promise<AmqpMessage<T>>(async (resolve, reject) => {
-      const finalMessage = json ? JSON.stringify(message) : message;
-      const correlationId = uuid4();
-      if (replyTo && this.rpcQueues.findIndex((x) => x.queue === replyTo) > -1) {
-        reject(`Please register the the replyTo queue "${replyTo}" to AmqpServer config`);
-      }
-      replyTo = replyTo || this.getDefaultRpcQueue();
-      const replyToQueue = this.rpcQueues.find((x) => x.queue === replyTo);
-      if (replyToQueue) {
-        this.rpcObservable.rpcSubscribe(`${replyToQueue.queue}.${replyToQueue.uniqueId}`,
-          correlationId,
-          replyToQueue.timeout,
-          (data) => {
-            this.channel.ack(data.message);
-            resolve(data.message);
-          },
-          (error) => {
-            if (error.message) {
-              try {
-                this.channel.ack(error.message);
-              } catch (err) {
-                console.log("[AMQP] failed to ack message");
-              }
-            }
-            reject(error);
-          });
-        await this.channel.sendToQueue(queue, new Buffer(finalMessage), {
-          correlationId,
-          persistent: false,
-          replyTo: `${replyToQueue.queue}.${replyToQueue.uniqueId}`,
-        });
-      } else {
-        reject(`Please register the the replyTo queue "${replyTo}" to AmqpServer config`);
-      }
-    });
+  private async bindQueue(binding: IBindingConfig) {
+    await this.channel.bindQueue(binding.queue, binding.exchange, binding.pattern, binding.args);
   }
 
   private getDefaultRpcQueue() {
     return this.rpcQueues[0].queue;
   }
+
   private async assertExchanges() {
     if (this.config.exchanges) {
       this.config.exchanges.forEach(async (exchange: IExchangeConfig) => {
@@ -153,6 +176,7 @@ export class AmqpServer {
       });
     }
   }
+
   private async assertQueues() {
     const queues = Object.keys(this.handlersBucket);
     queues.forEach(async (q) => {
@@ -168,6 +192,8 @@ export class AmqpServer {
         if (rpcQueues.length) {
           rpcQueues.forEach((x) => {
             this.rpcQueues.push({
+              exchange: x.exchange || this.config.defaultExhchange,
+              pattern: x.pattern || this.config.defaultPattern,
               queue: x.queue,
               timeout: x.timeout || this.defaultRpcTimeout,
               uniqueId: uuid4(),
@@ -175,6 +201,8 @@ export class AmqpServer {
           });
         } else {
           this.rpcQueues.push({
+            exchange: this.config.defaultExhchange,
+            pattern: this.config.defaultPattern,
             queue: "rpc_reply",
             timeout: this.defaultRpcTimeout,
             uniqueId: uuid4(),
@@ -182,6 +210,8 @@ export class AmqpServer {
         }
       } else {
         this.rpcQueues.push({
+          exchange: rpcQueues.exchange || this.config.defaultExhchange,
+          pattern: rpcQueues.pattern || this.config.defaultPattern,
           queue: rpcQueues.queue,
           timeout: rpcQueues.timeout || this.defaultRpcTimeout,
           uniqueId: uuid4(),
@@ -189,6 +219,8 @@ export class AmqpServer {
       }
     } else {
       this.rpcQueues.push({
+        exchange: this.config.defaultExhchange,
+        pattern: this.config.defaultPattern,
         queue: "rpc_reply",
         timeout: this.defaultRpcTimeout,
         uniqueId: uuid4(),
@@ -196,6 +228,13 @@ export class AmqpServer {
     }
     this.rpcQueues.forEach(async (q) => {
       await this.channel.assertQueue(`${q.queue}.${q.uniqueId}`, { durable: false, autoDelete: true });
+      if (q.exchange) {
+        await this.bindQueue({
+          exchange: q.exchange,
+          pattern: q.pattern || "",
+          queue: `${q.queue}.${q.uniqueId}`,
+        } as IBindingConfig);
+      }
     });
   }
 
@@ -258,10 +297,12 @@ export class AmqpServer {
     }
     return finalArgs;
   }
+
   private buildController(clazz: any, args?: any) {
     const finalArgs = this.buildArgs(clazz, undefined, args);
     return new clazz(...finalArgs);
   }
+
   private bindConsumers() {
     Object.keys(this.handlersBucket).forEach((key) => {
       const item = this.handlersBucket[key];

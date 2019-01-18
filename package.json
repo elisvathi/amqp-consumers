@@ -1,6 +1,6 @@
 {
   "name": "amqp-controllers",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "main": "lib/index.js",
   "description": "\"Amqp server with typescript decorators\"",
   "scripts": {

@@ -12,8 +12,19 @@ export interface IAmqpServerConfig {
    */
   extraQueues?: string[];
   exchanges?: IExchangeConfig[];
+  bindings?: IBindingConfig[];
   defaultRpcTimeout?: number;
+  defaultExhchange?: string;
+  defaultPattern?: string;
 }
+
+export interface IBindingConfig {
+  queue: string;
+  exchange: string;
+  pattern: string;
+  args?: any;
+}
+
 export interface IExchangeConfig {
   name: string;
   durable?: boolean;
@@ -21,11 +32,9 @@ export interface IExchangeConfig {
   autoDelete?: boolean;
   alternateExchange?: string;
   arguments?: any;
-  type: string;
+  type: "direct" | "fanout" | "topic" | "headers";
 }
-export interface IBindingConfig {
-  data?: any;
-}
+
 export interface IContainerClass<T> {
   new(...args: any[]): T;
 }
@@ -41,9 +50,11 @@ export interface IContainerOptions {
 
 export declare type ConsumerHandler = (msg: ConsumeMessage | null) => any;
 
-export interface IRpcQueueDeclaration { queue: string; timeout?: number; }
+export interface IRpcQueueDeclaration { queue: string; timeout?: number; exchange?: string; pattern?: string; }
 
 export interface IRpcQueueConfig {
+  exchange?: string;
+  pattern?: string;
   queue: string;
   uniqueId: string;
   timeout: number;

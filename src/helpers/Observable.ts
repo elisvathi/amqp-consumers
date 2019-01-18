@@ -8,6 +8,7 @@ export declare interface ISubscriptionHandlers<T> {
 export class Observable<T> {
   public once = true;
   protected subscribers: Array<ISubscriptionHandlers<T>> = [];
+
   public subscribe(handlers: ISubscriptionHandlers<T>): void {
     this.subscribers.push(handlers);
   }
@@ -34,7 +35,7 @@ export class Observable<T> {
       this.subscribers.splice(i, 1);
     });
   }
-  public notifyError(error: any, verification= true) {
+  public notifyError(error: any, verification = true) {
     const toRemove: number[] = [];
     this.subscribers.forEach((subscriber, index: number) => {
       if (!subscriber.verification || !verification || subscriber.verification(error)) {

@@ -20,22 +20,24 @@ export class TestConsumer {
     console.log("DATA", data.get().data);
     this.channel.ack(data);
     return new Promise((resolve, reject) => {
-      setTimeout(() => { reject({ status: "error" }); }, 4000);
+      setTimeout(() => { reject({ status: "error" }); }, 100);
     });
     // return {data: "ok"};
   }
 }
 
 const server = new AmqpServer({
+  bindings: [{queue: "TEST_QUEUE_2", exchange: "ig", pattern: ""}],
   consumers: [TestConsumer],
-  defaultRpcTimeout: 1000,
-  exchanges: [{ name: "ex", type: "direct" }],
-  // rpcQueues: [{queue: "response", timeout: 1000}],
+  defaultExhchange: "ig",
+  defaultRpcTimeout: 10000,
+  // exchanges: [{ name: "ig", type: "direct" }],
+  rpcQueues: [{queue: "response", timeout: 10000}],
   url: "amqp://localhost",
 });
 
 server.initServer().then(() => {
-  server.rpc("TEST_QUEUE_2", { data: "Test MEssage 33" }, true).then((r) => {
+  server.rpc("TEST_QUEUE_2", { data: "Test MEssage 33" }, "response").then((r) => {
     console.log("GOT RPC MESSAGE", r.get());
   }).catch((r) => {
     let message: any;
